@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Link Generator App</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Roboto', sans-serif; }
+        body { background: #f8f9fa; color: #333; display: flex; justify-content: center; min-height: 100vh; }
+        
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            background: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 15px rgba(0,0,0,0.05);
+        }
+
+        .app-bar {
+            background: #6200ee;
+            color: white;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .app-bar h1 { font-size: 18px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+
+        .app-content {
+            flex: 1;
+            padding: 16px;
+            background: #f2f4f8;
+        }
+
+        .card {
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 16px;
+        }
+
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 500; color: #555; margin-bottom: 6px; }
+        
+        input[type="file"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #fff;
+            outline: none;
+        }
+
+        .btn-generate {
+            width: 100%;
+            background: #6200ee;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 4px rgba(98, 0, 238, 0.3);
+        }
+        .btn-generate:active { background: #3700b3; }
+
+        .history-card {
+            background: white;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            border-left: 4px solid #6200ee;
+        }
+
+        .history-info { flex: 1; overflow: hidden; }
+        .history-info p { font-size: 12px; font-weight: 500; color: #444; margin-bottom: 2px; }
+        .link-text {
+            font-size: 11px;
+            background: #f1f3f4;
+            padding: 4px 6px;
+            border-radius: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+            margin-bottom: 6px;
+            font-family: monospace;
+            color: #1a0dab;
+        }
+
+        .time-text { font-size: 10px; color: #777; display: block; margin-bottom: 6px; }
+
+        .action-row { display: flex; gap: 6px; }
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 11px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            background: #e0e0e0;
+            color: #333;
+        }
+        .btn-sm:hover { background: #d0d0d0; }
+
+        .btn-delete {
+            background: #b00020;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .btn-delete span { font-size: 18px; }
+
+        .section-title { font-size: 14px; font-weight: 700; color: #333; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container" id="mainAppContainer">
+        <div class="app-bar">
+            <h1><span class="material-icons">dashboard</span> App Studio</h1>
+            <span class="material-icons">settings</span>
+        </div>
+
+        <div class="app-content">
+            <div class="card">
+                <div class="form-group">
+                    <label>1. Upload Image</label>
+                    <input type="file" id="imageInput" accept="image/*">
+                </div>
+                
+                <div class="form-group">
+                    <label>2. Select Size / View</label>
+                    <select id="sizeSelect">
+                        <option value="contain">Full Screen (Contain)</option>
+                        <option value="cover">Full Cover (Zoom)</option>
+                        <option value="original">Original Size</option>
+                    </select>
+                </div>
+
+                <button class="btn-generate" onclick="generateAssets()">
+                    <span class="material-icons">bolt</span> Generate Link
+                </button>
+            </div>
+
+            <div class="section-title">Generated History (For Excel)</div>
+            <div id="historyContainer"></div>
+        </div>
+    </div>
+
+<script>
+    // పేజీ ఓపెన్ అయిన వెంటనే లింక్‌లో ఇమేజ్ కోడ్ ఉంటే నేరుగా ఫోటో చూపించడానికి
+    window.onload = function() {
+        const hash = window.location.hash;
+        if (hash.startsWith("#imgdata:")) {
+            const base64Data = decodeURIComponent(hash.substring(9));
+            document.open();
+            document.write(`<!DOCTYPE html><html><head><title>Image View</title></head><body style="margin:0;background:#000;display:flex;justify-content:center;align-items:center;height:100vh;"><img src="${base64Data}" style="max-width:100%;max-height:100%;object-fit:contain;"></body></html>`);
+            document.close();
+        } else {
+            loadHistory();
+        }
+    };
+
+    function generateAssets() {
+        const fileInput = document.getElementById('imageInput');
+        const sizeSelect = document.getElementById('sizeSelect').value;
+
+        if (fileInput.files.length === 0) {
+            alert("దయచేసి మొదట ఇమేజ్‌ని సెలెక్ట్ చేయండి!");
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+
+        reader.onload = function(event) {
+            const img = new Image();
+            img.src = event.target.result;
+
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800;
+                const MAX_HEIGHT = 800;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                const timestamp = new Date().toLocaleString();
+
+                const baseUrl = window.location.href.split('#')[0];
+                const directUrl = `${baseUrl}#imgdata:${encodeURIComponent(compressedBase64)}`;
+                const htmlSnippet = `<img src="${compressedBase64}" style="width:100%; object-fit:${sizeSelect};">`;
+
+                const itemData = {
+                    id: 'id_' + Date.now(),
+                    time: timestamp,
+                    url: directUrl,
+                    html: htmlSnippet
+                };
+
+                try {
+                    saveToStorage(itemData);
+                    loadHistory();
+                    alert("లింక్ విజయవంతంగా జనరేట్ అయింది! ఎక్సెల్ కోసం కాపీ చేసుకోండి.");
+                } catch (e) {
+                    alert("స్టోరేజ్ ఫుల్ అయింది లేదా ఇమేజ్ చాలా పెద్దదిగా ఉంది!");
+                }
+            };
+        };
+
+        reader.readAsDataURL(file);
+    }
+
+    function saveToStorage(item) {
+        let history = JSON.parse(localStorage.getItem('appStudioHistory')) || [];
+        history.unshift(item);
+        localStorage.setItem('appStudioHistory', JSON.stringify(history));
+    }
+
+    function loadHistory() {
+        const container = document.getElementById('historyContainer');
+        if (!container) return;
+        let history = JSON.parse(localStorage.getItem('appStudioHistory')) || [];
+
+        if (history.length === 0) {
+            container.innerHTML = `<p style="text-align:center; color:#888; font-size:13px; margin-top:20px;">ఇంకా ఎలాంటి డేటా లేదు.</p>`;
+            return;
+        }
+
+        container.innerHTML = "";
+        history.forEach((item) => {
+            container.innerHTML += `
+                <div class="history-card" id="${item.id}">
+                    <div class="history-info">
+                        <p>Excel Link (URL):</p>
+                        <span class="link-text">${item.url}</span>
+                        <p>HTML Code:</p>
+                        <span class="link-text">${item.html}</span>
+                        <span class="time-text">Time: ${item.time}</span>
+                        <div class="action-row">
+                            <button class="btn-sm" onclick="copyText('${item.url}')">URL కాపీ</button>
+                            <button class="btn-sm" onclick="copyText('${item.html}')">HTML కాపీ</button>
+                        </div>
+                    </div>
+                    <button class="btn-delete" onclick="deleteItem('${item.id}')" title="Delete">
+                        <span class="material-icons">delete</span>
+                    </button>
+                </div>
+            `;
+        });
+    }
+
+    function copyText(text) {
+        navigator.clipboard.writeText(text);
+        alert("లింక్ కాపీ అయింది! ఇప్పుడు దీన్ని ఎక్సెల్ షీట్‌లో పేస్ట్ చేసుకోవచ్చు.");
+    }
+
+    function deleteItem(id) {
+        let history = JSON.parse(localStorage.getItem('appStudioHistory')) || [];
+        history = history.filter(item => item.id !== id);
+        localStorage.setItem('appStudioHistory', JSON.stringify(history));
+        loadHistory();
+    }
+</script>
+
+</body>
+</html>
