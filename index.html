@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Link Generator</title>
+    <title>Permanent Image Link Generator</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -13,7 +13,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
         }
         .container {
             background: #ffffff;
@@ -21,12 +21,11 @@
             border-radius: 10px;
             box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
             width: 100%;
-            max-width: 400px;
+            max-width: 500px;
         }
-        h2 {
+        h2, h3 {
             text-align: center;
             color: #333;
-            margin-bottom: 20px;
         }
         .form-group {
             margin-bottom: 15px;
@@ -66,25 +65,49 @@
         button:hover {
             background-color: #218838;
         }
-        #result {
-            margin-top: 20px;
-            word-break: break-all;
-            text-align: center;
+        .saved-list {
+            margin-top: 25px;
+            border-top: 2px solid #eee;
+            padding-top: 15px;
         }
-        #result a {
+        .saved-item {
+            background: #f9f9f9;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .saved-item a {
             color: #007bff;
             text-decoration: none;
             font-weight: bold;
         }
-        #result a:hover {
+        .saved-item a:hover {
             text-decoration: underline;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            width: auto;
+            margin: 0;
+        }
+        .delete-btn:hover {
+            background-color: #c82333;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>ఇమేజ్ లింక్ జనరేటర్</h2>
+        <h2>పర్మినెంట్ ఇమేజ్ లింక్ జనరేటర్</h2>
         
         <div class="form-group">
             <label for="imageName">పేరు (Name):</label>
@@ -101,17 +124,22 @@
             <label for="originalSize" style="margin-bottom: 0;">ఒరిజినల్ సైజ్ (Original Size)</label>
         </div>
 
-        <button onclick="generateLink()">లింక్ జనరేట్ చేయి</button>
+        <button onclick="saveAndGenerate()">పర్మినెంట్ లింక్ జనరేట్ చేయి</button>
 
-        <div id="result"></div>
+        <div class="saved-list">
+            <h3>సేవ్ అయిన లింక్స్ (Saved Links)</h3>
+            <div id="linksContainer"></div>
+        </div>
     </div>
 
     <script>
-        function generateLink() {
-            const name = document.getElementById('imageName').value;
+        // పేజీ లోడ్ అయిన వెంటనే లోకల్ స్టోరేజ్ లో ఉన్న డేటాని చూపించు
+        document.addEventListener("DOMContentLoaded", loadSavedImages);
+
+        function saveAndGenerate() {
+            const nameInput = document.getElementById('imageName').value.trim();
             const fileInput = document.getElementById('imageFile');
             const isOriginalSize = document.getElementById('originalSize').checked;
-            const resultDiv = document.getElementById('result');
 
             if (fileInput.files.length === 0) {
                 alert("దయచేసి ఒక ఇమేజ్‌ని సెలెక్ట్ చేయండి!");
@@ -119,16 +147,87 @@
             }
 
             const file = fileInput.files[0];
-            const blobUrl = URL.createObjectURL(file);
+            const reader = new FileReader();
 
-            // లింక్ మరియు సైజ్ ప్రాపర్టీలను సెట్ చేయడం
-            let styleAttr = isOriginalSize ? 'style="max-width: none; height: auto;"' : 'style="max-width: 100%; height: auto;"';
+            // ఇమేజ్ ని Base64 స్ట్రింగ్ లాగా మార్చడం (ఇది పర్మినెంట్ లింక్ లా పనిచేస్తుంది)
+            reader.onload = function (e) {
+                const base64Image = e.target.result;
+                const imageName = nameInput || "Unnamed Image";
 
-            // ఒక కొత్త పేజీ లాగా ఓపెన్ అయ్యేలా లింక్ తయారు చేయడం
-            resultDiv.innerHTML = `
-                <p>మీ లింక్ సిద్ధంగా ఉంది (${name || 'Image'}):</p>
-                <a href="${blobUrl}" target="_blank" id="generatedLink">ఇమేజ్ లింక్ ఇక్కడ ఉంది (క్లిక్ చేయండి)</a>
-            `;
+                const imageData = {
+                    name: imageName,
+                    url: base64Image,
+                    originalSize: isOriginalSize
+                };
+
+                // లోకల్ స్టోరేజ్ నుండి పాత డేటా తీసుకోవడం
+                let savedImages = JSON.parse(localStorage.getItem('permanentImages')) || [];
+                
+                // కొత్త ఇమేజ్ ని యాడ్ చేయడం
+                savedImages.push(imageData);
+                
+                // మళ్లీ లోకల్ స్టోరేజ్ లో సేవ్ చేయడం
+                localStorage.setItem('permanentImages', JSON.stringify(savedImages));
+
+                // ఫామ్ క్లియర్ చేసి లిస్ట్ ని రిఫ్రెష్ చేయడం
+                document.getElementById('imageName').value = '';
+                document.getElementById('imageFile').value = '';
+                document.getElementById('originalSize').checked = false;
+                
+                loadSavedImages();
+            };
+
+            reader.readAsDataURL(file);
+        }
+
+        function loadSavedImages() {
+            const container = document.getElementById('linksContainer');
+            container.innerHTML = '';
+
+            let savedImages = JSON.parse(localStorage.getItem('permanentImages')) || [];
+
+            if (savedImages.size === 0 && savedImages.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #777;">ఇంకా ఎలాంటి లింక్స్ సేవ్ కాలేదు.</p>';
+                return;
+            }
+
+            savedImages.forEach((img, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'saved-item';
+
+                // ఇమేజ్ ని సపరేట్ పేజీలో ఓపెన్ చేయడానికి ఒక చిన్న ఫంక్షన్
+                itemDiv.innerHTML = `
+                    <span><strong>${img.name}</strong></span>
+                    <div>
+                        <a href="#" onclick="openImage('${index}')">లింక్ ఓపెన్ చేయి</a>
+                        <button class="delete-btn" onclick="deleteImage(${index})">డిలీట్</button>
+                    </div>
+                `;
+                container.appendChild(itemDiv);
+            });
+        }
+
+        function openImage(index) {
+            let savedImages = JSON.parse(localStorage.getItem('permanentImages')) || [];
+            let img = savedImages[index];
+
+            // కొత్త ట్యాబ్ తెరిచి కేవలం ఇమేజ్ మాత్రమే చూపించడం
+            let newWindow = window.open();
+            newWindow.document.write(`
+                <html>
+                <head><title>${img.name}</title></head>
+                <body style="margin:0; background:#000; display:flex; justify-content:center; align-items:center; height:100vh;">
+                    <img src="${img.url}" style="${img.originalSize ? 'max-width:none; height:auto;' : 'max-width:100%; max-height:100%; object-fit:contain;'}">
+                </body>
+                </html>
+            `);
+        }
+
+        function deleteImage(index) {
+            let savedImages = JSON.parse(localStorage.getItem('permanentImages')) || [];
+            savedImages.splice(index, 1);
+            localStorage.setItem('permanentImages', JSON.stringify(savedImages));
+            loadSavedImages();
         }
     </script>
 
